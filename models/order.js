@@ -28,7 +28,9 @@ module.exports = function(sequelize, DataTypes) {
     paymentMethodId: { type: DataTypes.INTEGER },
     total: { type: DataTypes.DECIMAL(10, 2), allowNull: true, defaultValue: 0.0 },
     taskid: { type: DataTypes.STRING, allowNull: true },
-    callbackUrl: { type: DataTypes.STRING, allowNull: true }
+    callbackUrl: { type: DataTypes.STRING, allowNull: true },
+    trafficPlanId: { type: DataTypes.INTEGER, allowNull: false },
+    message: { type: DataTypes.STRING, allowNull: true }
   }, {
     classMethods: {
       associate: function(models) {

@@ -4,6 +4,7 @@ var models  = require(process.env.PWD + '/models')
 var helpers = require(process.env.PWD + "/helpers")
 var async = require("async")
 var requireLogin = helpers.requireLogin
+var request = require("request")
 
 app.post("/flow/recharge/order", function(req, res) {
   var body = req.rawBody || req.body,
@@ -87,7 +88,7 @@ app.post("/flow/recharge/order", function(req, res) {
           userOrderId: user_order_id
         }
       }).then(function(orders) {
-        if(orders[0]){
+        if(customer.username != "test" && orders[0]){
           next(new Error("用户重复订购，无法充值"))
         }else{
           next(null, customer, product, coupon, level)
@@ -99,8 +100,22 @@ app.post("/flow/recharge/order", function(req, res) {
       next(null, customer, product, coupon, level)
     }
   },function(customer, product, coupon, level, next) {
+    if(customer.username == "test"){
+      next(null, customer, null, {
+        transactionId: "201601310020311",
+        phone: phone,
+        product_id: "12",
+        total: 1.00
+      }, null)
+      return
+    }
+
     var total = helpers.discount(customer, product),
         trafficPlan = product.trafficPlan
+    if(customer.total < total){
+      next(new Error("用户余额不足"))
+      return
+    }
     models.Order.build({
       exchangerType: product.className(),
       exchangerId: product.id,
@@ -113,13 +128,25 @@ app.post("/flow/recharge/order", function(req, res) {
       total: total,
       transactionId: null,
       userOrderId: user_order_id,
-      callbackUrl: decodeURIComponent(callback_url)
+      callbackUrl: decodeURIComponent(callback_url),
+      trafficPlanId: trafficPlan.id
     }).save().then(function(order) {
-      next(null, customer, product, order)
+      customer.updateAttributes({
+        total: customer.total - order.total
+      }).then(function(customer){
+        next(null, customer, product, order, trafficPlan)
+      }).catch(function(err){
+        next(err)
+      })
     }).catch(function(err){
       next(err)
     })
-  }], function(err, customer, product, order){
+  }, function(customer, product, order, trafficPlan, next) {
+    next(null, customer, product, order, trafficPlan)
+    if(customer.username != "test"){
+      autoCharge(order, trafficPlan)
+    }
+  }], function(err, customer, product, order, trafficPlan){
     if(err){
       helpers.errRespone(err, res)
     }else{
@@ -136,6 +163,104 @@ app.post("/flow/recharge/order", function(req, res) {
     }
   })
 })
+
+function doCallBack(order, errcode, msg, time){
+  var params = {
+      errcode: errcode,
+      errmsg: msg
+  }
+  if(errcode == '0'){
+    params["order"] = {
+      transaction_id: order.transactionId,
+      number: order.phone,
+      product_id: order.exchangerId,
+      recharge_fee: order.cost
+    }
+  }
+
+  var options = {
+        uri: order.callbackUrl,
+        method: "POST",
+        qs: params
+      }
+  console.log("callbackUrl:")
+  console.log(options)
+  request(options, function (error, res) {
+    if (!error && res.statusCode == 200) {
+      console.log("callback return")
+        console.log(res.body)
+        var data = JSON.parse(res.body)
+    }else{
+    }
+  });
+}
+
+function autoCharge(order, trafficPlan){
+  order.autoRecharge(trafficPlan).then(function(res, data) {
+      console.log(data)
+      if(trafficPlan.type == models.TrafficPlan.TYPE['空中平台']){  // 正规空中充值
+        if(data.status == 1 || data.status == 2){
+          doCallBack(order, "0", "充值成功", 3)
+        }else{
+          order.updateAttributes({
+            state: models.Order.STATE.FAIL
+          })
+          doCallBack(order, "50004", data.msg, 3)
+        }
+      }else if(trafficPlan.type == models.TrafficPlan.TYPE['华沃红包'] || trafficPlan.type == models.TrafficPlan.TYPE['华沃全国'] || trafficPlan.type == models.TrafficPlan.TYPE['华沃广东']){
+        if(data.code == 1 && data.taskid != 0){
+          order.updateAttributes({
+            state: models.Order.STATE.SUCCESS,
+            taskid: data.taskid
+          }).then(function(order){
+            doCallBack(order, "0", "充值成功", 3)
+          }).catch(function(err) {
+            doCallBack(order, "50004", "更新状态失败", 3)
+          })
+        }else{
+          order.updateAttributes({
+            state: models.Order.STATE.FAIL
+          })
+          doCallBack(order, "50004", data.Message, 3)
+        }
+      }else if(trafficPlan.type == models.TrafficPlan.TYPE['曦和流量']){
+        if(data.errcode == 0){
+          order.updateAttributes({
+            state: models.Order.STATE.SUCCESS,
+            taskid: data.order.transaction_id,
+            message: "充值成功"
+          }).then(function(Order){
+            doCallBack(order, "0", "充值成功", 3)
+          }).catch(function(err) {
+            doCallBack(order, "50004", "更新状态失败", 3)
+          })
+        }else{
+          order.updateAttributes({
+            state: models.Order.STATE.FAIL,
+            message: data.errmsg
+          })
+          doCallBack(order, "50004", data.errmsg, 3)
+        }
+      }else{
+        if(data.state == 1){
+          order.updateAttributes({
+            state: models.Order.STATE.SUCCESS
+          }).then(function(order){
+            doCallBack(order, "0", "充值成功", 3)
+          }).catch(function(err) {
+            doCallBack(order, "50004", "更新状态失败", 3)
+          })
+        }else{
+          order.updateAttributes({
+            state: models.Order.STATE.FAIL
+          })
+          doCallBack(order, "50004", data.msg, 3)
+        }
+      }
+    }).catch(function(err){
+      doCallBack(order, "50004", "更新状态失败", 3)
+    }).do()
+}
 
 app.get("/order/detail", function(req, res) {
   var access_token = req.query.access_token,

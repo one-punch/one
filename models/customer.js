@@ -54,6 +54,14 @@ module.exports = function(sequelize, DataTypes) {
       set: function(val) {
         this.setDataValue('orderTotal', parseFloat(val))
       }
+    },
+    total: {
+      type: DataTypes.DECIMAL,
+      allowNull: false,
+      defaultValue: 0.0,
+      set: function(val) {
+        this.setDataValue('total', parseFloat(val))
+      }
     }
   }, {
     classMethods: _.merge(concern.classMethods, {
