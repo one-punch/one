@@ -42,7 +42,8 @@ module.exports = function(sequelize, DataTypes) {
     },
     expires_in: {
       allowNull: true,
-      type: DataTypes.DATE
+      type: DataTypes.DATE,
+      defaultValue: new Date(0)
     },
     balance: { type: DataTypes.DECIMAL(10, 2), allowNull: true, defaultValue: 0 },
     levelId: { type: DataTypes.INTEGER, allowNull: true },

@@ -84,6 +84,11 @@ for (var i = 0; i < apiV1.length; i++) {
   app.use('/api/v1', apiV1[i]);
 };
 
+var adminRouters  = require('./routers/admin');
+
+for (var i = 0; i < adminRouters.length; i++) {
+  app.use('/admin', adminRouters[i]);
+};
 
 // --------------- app -----------------------
 

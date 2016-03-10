@@ -1,5 +1,8 @@
 'use strict';
 var helpers = require("../helpers")
+var config = require("../config")
+var recharger = require("../recharger")
+var ChongRecharger = recharger.ChongRecharger
 
 module.exports = function(sequelize, DataTypes) {
   var Order = sequelize.define('Order', {
@@ -29,7 +32,7 @@ module.exports = function(sequelize, DataTypes) {
   }, {
     classMethods: {
       associate: function(models) {
-        // models.Order.ChongRecharger = new ChongRecharger(models, config.chong[process.env.NODE_ENV || "development"].client_id, config.chong[process.env.NODE_ENV || "development"].client_secret, recharger.storeCallback, recharger.accessCallback)
+        models.Order.ChongRecharger = new ChongRecharger(models, config.chong[process.env.NODE_ENV || "development"].client_id, config.chong[process.env.NODE_ENV || "development"].client_secret, recharger.storeCallback, recharger.accessCallback)
       }
     },
     instanceMethods: {
@@ -44,7 +47,7 @@ module.exports = function(sequelize, DataTypes) {
       },
       stateName: function(){
         if(this.state === Order.STATE.INIT){
-          return "待处理"
+          return "待付款"
         }else if(this.state === Order.STATE.SUCCESS){
           return "充值任务提交成功"
         }else if(this.state === Order.STATE.FAIL){
@@ -70,7 +73,7 @@ module.exports = function(sequelize, DataTypes) {
         }else if(trafficPlan.type == typeJson['华沃红包']){
           return new HuawoRecharger(this.phone, this.bid, this.id, config.huawo_lucky_account, config.huawo_lucky_pwd, 0)
         }else if(trafficPlan.type == typeJson['曦和流量']){
-          return Order.ChongRecharger.rechargeOrder(this.phone, this.bid, "http://protchar.cn/liuliangshopconfirm")
+          return Order.ChongRecharger.rechargeOrder(this.phone, this.bid, "http://protchar.cn:8080/liuliangshopconfirm")
         }else{
           return new Recharger(this.phone, this.value)
         }
