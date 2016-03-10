@@ -18,7 +18,7 @@ var fs        = require('fs');
 var app = express();
 
 var models  = require('./models');
-app.set('port', process.env.PORT || 3000);
+app.set('port', process.env.PORT || 3001);
 app.enable('verbose errors');
 app.use(express.static(__dirname + '/public'));
 
