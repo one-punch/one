@@ -21,13 +21,10 @@ admin.get('/syncliuliangshop', function(req ,res) {
         return models.TrafficPlan.Provider["中国联通"]
     }
   }
-        console.log("start")
 
   models.Order.ChongRecharger.getProducts(function(data){
     if(data.errcode == 0){
       async.each(data.products, function(product, next){
-        console.log("models")
-        console.log(models)
         models.TrafficPlan.findOrCreate({
           where: {
             bid: product.product_id
