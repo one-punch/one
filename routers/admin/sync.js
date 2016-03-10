@@ -22,6 +22,37 @@ admin.get('/syncliuliangshop', function(req ,res) {
     }
   }
 
+
+
+  function syncProduct(trafficPlan){
+    models.Product.findOrCreate({
+      where: {
+        trafficPlanId: trafficPlan.id
+      },
+      defaults: {
+        name: trafficPlan.name,
+        providerId: trafficPlan.providerId,
+        value: trafficPlan.value,
+        price: trafficPlan.cost,
+        display: true,
+        trafficPlanId: trafficPlan.id
+      }
+    }).spread(function(product) {
+      product.updateAttributes({
+        name: trafficPlan.name,
+        providerId: trafficPlan.providerId,
+        value: trafficPlan.value,
+        price: trafficPlan.cost
+      }).then(function(product){
+        return
+      }).catch(function(err){
+        return
+      })
+    }).catch(function(err) {
+      return
+    })
+  }
+
   models.Order.ChongRecharger.getProducts(function(data){
     if(data.errcode == 0){
       async.each(data.products, function(product, next){
@@ -50,6 +81,7 @@ admin.get('/syncliuliangshop', function(req ,res) {
             bid: product.product_id,
             purchasePrice: product.cost
           }).then(function(trafficPlan){
+            syncProduct(trafficPlan)
             next(null)
           }).catch(function(err){
             next(err)
