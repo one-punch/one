@@ -17,10 +17,7 @@ app.post("/flow/recharge/order", function(req, res) {
       access_token = body.access_token
 
   if(!(phone && product_id && sign && access_token)){
-    res.json({
-      errcode: 50001,
-      errmsg: "access_token、sign、product_id或者phone参数有误",
-    })
+    helpers.errRespone(new Error(50003), res)
     return
   }
 
@@ -29,7 +26,7 @@ app.post("/flow/recharge/order", function(req, res) {
       if(customer){
         next(null, customer)
       }else{
-        next(new Error("token失效"))
+        next(new Error(50004))
       }
     }).catch(function(err) {
       next(err)
@@ -46,14 +43,14 @@ app.post("/flow/recharge/order", function(req, res) {
     if(_sign == sign){
       next(null, customer)
     }else{
-      next(new Error("签名有误"))
+      next(new Error(50005))
     }
   }, function(customer, next) {
     models.Product.findById(product_id).then(function(product) {
       if(product){
         next(null, customer, product)
       }else{
-        next(new Error("product_id参数有误"))
+        next(new Error(50006))
       }
     })
   }, function(customer, product, next) {
@@ -89,7 +86,7 @@ app.post("/flow/recharge/order", function(req, res) {
         }
       }).then(function(orders) {
         if(customer.username != "test" && orders[0]){
-          next(new Error("用户重复订购，无法充值"))
+          next(new Error(50007))
         }else{
           next(null, customer, product, coupon, level)
         }
@@ -113,7 +110,7 @@ app.post("/flow/recharge/order", function(req, res) {
     var total = helpers.discount(customer, product),
         trafficPlan = product.trafficPlan
     if(customer.total < total){
-      next(new Error("用户余额不足"))
+      next(new Error(50008))
       return
     }
     models.Order.build({
@@ -205,7 +202,7 @@ function autoCharge(order, trafficPlan){
           order.updateAttributes({
             state: models.Order.STATE.FAIL
           })
-          doCallBack(order, "50004", data.msg, 3)
+          doCallBack(order, "50014", data.msg, 3)
         }
       }else if(trafficPlan.type == models.TrafficPlan.TYPE['华沃红包'] || trafficPlan.type == models.TrafficPlan.TYPE['华沃全国'] || trafficPlan.type == models.TrafficPlan.TYPE['华沃广东']){
         if(data.code == 1 && data.taskid != 0){
@@ -215,13 +212,13 @@ function autoCharge(order, trafficPlan){
           }).then(function(order){
             doCallBack(order, "0", "充值成功", 3)
           }).catch(function(err) {
-            doCallBack(order, "50004", "更新状态失败", 3)
+            doCallBack(order, "50015", "更新状态失败", 3)
           })
         }else{
           order.updateAttributes({
             state: models.Order.STATE.FAIL
           })
-          doCallBack(order, "50004", data.Message, 3)
+          doCallBack(order, "50014", data.Message, 3)
         }
       }else if(trafficPlan.type == models.TrafficPlan.TYPE['曦和流量']){
         if(data.errcode == 0){
@@ -232,14 +229,14 @@ function autoCharge(order, trafficPlan){
           }).then(function(Order){
             doCallBack(order, "0", "充值成功", 3)
           }).catch(function(err) {
-            doCallBack(order, "50004", "更新状态失败", 3)
+            doCallBack(order, "50015", "更新状态失败", 3)
           })
         }else{
           order.updateAttributes({
             state: models.Order.STATE.FAIL,
             message: data.errmsg
           })
-          doCallBack(order, "50004", data.errmsg, 3)
+          doCallBack(order, "50014", data.errmsg, 3)
         }
       }else{
         if(data.state == 1){
@@ -248,17 +245,17 @@ function autoCharge(order, trafficPlan){
           }).then(function(order){
             doCallBack(order, "0", "充值成功", 3)
           }).catch(function(err) {
-            doCallBack(order, "50004", "更新状态失败", 3)
+            doCallBack(order, "50015", "更新状态失败", 3)
           })
         }else{
           order.updateAttributes({
             state: models.Order.STATE.FAIL
           })
-          doCallBack(order, "50004", data.msg, 3)
+          doCallBack(order, "50014", data.msg, 3)
         }
       }
     }).catch(function(err){
-      doCallBack(order, "50004", "更新状态失败", 3)
+      doCallBack(order, "50015", "更新状态失败", 3)
     }).do()
 }
 
@@ -268,10 +265,7 @@ app.get("/order/detail", function(req, res) {
       order_id = req.query.order_id
 
   if(!(access_token && sign && order_id)){
-    res.json({
-      errcode: 50001,
-      errmsg: "access_token、sign或者order_id",
-    })
+    helpers.errRespone(new Error(50010), res)
     return
   }
 
@@ -280,7 +274,7 @@ app.get("/order/detail", function(req, res) {
       if(customer){
         next(null, customer)
       }else{
-        next(new Error(""))
+        next(new Error(50009))
       }
     }).catch(function(err) {
       next(err)
@@ -293,7 +287,7 @@ app.get("/order/detail", function(req, res) {
     if(_sign == sign){
       next(null, customer)
     }else{
-      next(new Error("签名有误"))
+      next(new Error(50005))
     }
   }, function(customer, next) {
     models.Order.findOne({
@@ -305,7 +299,7 @@ app.get("/order/detail", function(req, res) {
       if(order){
         next(null, customer, order)
       }else{
-        next(new Error("订单不存在"))
+        next(new Error(50011))
       }
     })
   }], function(err, customer, order) {
@@ -338,10 +332,7 @@ app.get("/order/lists", function(req, res) {
       perPage = 30
 
   if(!(access_token && sign && start_time && end_time && page)){
-    res.json({
-      errcode: 50001,
-      errmsg: "access_token、sign、start_time、end_time或者page参数有误",
-    })
+    helpers.errRespone(new Error(50013), res)
     return
   }
 
@@ -350,7 +341,7 @@ app.get("/order/lists", function(req, res) {
       if(customer){
         next(null, customer)
       }else{
-        next(new Error("token失效"))
+        next(new Error(50004))
       }
     }).catch(function(err) {
       next(err)
@@ -365,7 +356,7 @@ app.get("/order/lists", function(req, res) {
     if(_sign == sign){
       next(null, customer)
     }else{
-      next(new Error("签名有误"))
+      next(new Error(50005))
     }
   }, function(customer, next){
     console.log(start_time)

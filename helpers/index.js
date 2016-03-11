@@ -803,10 +803,61 @@ function iflt(a, b) {
 };
 
 function errRespone(err, res){
-  console.log(err)
-  res.json({
-    errcode: 1
-  })
+  console.log(err.message)
+  var errcode = parseInt(err.message)
+  var re = {errcode: errcode}
+  switch(errcode)
+  {
+  case 50001:
+    re['errmsg']= "client_id client_secret或者grant_type参数有误"
+    break;
+  case 50002:
+    re['errmsg']= "client_id或者client_secret参数有误"
+    break;
+  case 50003:
+    re['errmsg']= "access_token、sign、product_id或者phone参数有误"
+    break;
+  case 50004:
+    re['errmsg']= "token失效"
+    break;
+  case 50005:
+    re['errmsg']= "签名有误"
+    break;
+  case 50006:
+    re['errmsg']= "product_id参数有误"
+    break;
+  case 50007:
+    re['errmsg']= "用户重复订购，无法充值"
+    break;
+  case 50008:
+    re['errmsg']= "用户余额不足"
+    break;
+  case 50009:
+    re['errmsg']= "access_toke参数有误或者已过期"
+    break;
+  case 50010:
+    re['errmsg']= "access_token、sign或者order_id参数有误"
+    break;
+  case 50011:
+    re['errmsg']= "订单不存在"
+    break;
+  case 50012:
+    re['errmsg']= "access_token参数有误"
+    break;
+  case 50013:
+    re['errmsg']= "access_token、sign、start_time、end_time或者page参数有误"
+    break;
+  case 50014:
+    re['errmsg']= "充值服务错误"
+    break;
+  case 50015:
+    re['errmsg']= "更新状态失败"
+    break;
+  default:
+    re['errmsg']= "充值服务错误，请联系客服"
+    break;
+  }
+  res.json(re)
 }
 
 function formatQueryParams(params, urlencode){

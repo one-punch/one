@@ -10,10 +10,7 @@ app.get("/product/lists", function(req, res) {
   var access_token = req.query.access_token
 
   if(!access_token) {
-    res.json({
-      errcode: 50003,
-      errmsg: "access_token参数有误",
-    })
+    helpers.errRespone(new Error(50012), res)
     return
   }
 
@@ -22,7 +19,7 @@ app.get("/product/lists", function(req, res) {
       if(customer){
         next(null, customer)
       }else{
-        next(new Error("access_toke参数有误或者已过期"))
+        next(new Error(50009))
       }
     }).catch(function(err){
       next(err)

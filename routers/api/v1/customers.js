@@ -7,12 +7,22 @@ var requireLogin = helpers.requireLogin
 
 
 app.post("/customer/create", function(req, res) {
-  models.Customer.build({
-    username: "test",
-    password: "123456"
-  }).save().then(function(customer){
+  models.Customer.findOrCreate({
+    where: {
+      username: "test"
+    },
+    defaults: {
+      username: "test",
+      password: "123456"
+
+    }
+  }).spread(function(customer){
     res.json({
-      msg: "success"
+      msg: "success",
+      customer: {
+        client_id: customer.client_id,
+        client_secret: customer.client_secret
+      }
     })
   }).catch(function(err) {
     res.json(err)
@@ -20,16 +30,13 @@ app.post("/customer/create", function(req, res) {
 })
 
 app.post("/auth/token", function(req, res) {
-  var body = req.body || req.rawBody,
+  var body = req.rawBody,
       client_id = body.client_id,
       client_secret = body.client_secret,
       grant_type = body.grant_type
 
   if(!(client_id && client_secret && grant_type == "client_credential")) {
-    res.json({
-      errcode: 50001,
-      errmsg: "client_id client_secret或者grant_type参数有误",
-    })
+    helpers.errRespone(new Error(50001), res)
     return
   }
 
@@ -52,7 +59,7 @@ app.post("/auth/token", function(req, res) {
           })
         }
       }else{
-        next(new Error("client_id或者client_secret参数有误"))
+        next(new Error(50002))
       }
     }).catch(function(err){
       next(err)
