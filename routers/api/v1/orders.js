@@ -33,11 +33,15 @@ app.post("/flow/recharge/order", function(req, res) {
     })
   }, function(customer, next){
     var signParams = {
-      callback_url: callback_url,
       client_id: client_id,
       phone: phone,
-      user_order_id: user_order_id,
       product_id: product_id
+    }
+    if(callback_url){
+      signParams["callback_url"] = callback_url
+    }
+    if(user_order_id){
+      signParams["user_order_id"] = user_order_id
     }
     var _sign = helpers.sign(signParams)
     if(_sign == sign){
@@ -162,6 +166,9 @@ app.post("/flow/recharge/order", function(req, res) {
 })
 
 function doCallBack(order, errcode, msg, time){
+  if(!order.callbackUrl){
+    return
+  }
   var params = {
       errcode: errcode,
       errmsg: msg
